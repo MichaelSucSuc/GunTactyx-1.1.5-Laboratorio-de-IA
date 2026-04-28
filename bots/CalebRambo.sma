@@ -1,95 +1,47 @@
 // Estrategia: Caleb (vigía) + Rambos (atacantes)
-// Equipo: 4 bots — ID0=Jefe, ID1=Caleb, ID2=Rambo1, ID3=Rambo2
+// ID0=Jefe, ID1=Caleb, ID2=Rambo1, ID3=Rambo2
 //
 // Flujo:
-//   1. Jefe manda a Caleb con say(1)
-//   2. Caleb avanza SIN disparar, al ver enemigo hace say(2) y regresa
-//   3. Si Caleb muere, el jefe escucha disparos enemigos con hear() y manda a Rambo hacia allá
-//   4. Rambo1 sale primero, si muere sale Rambo2
+//   1. Jefe hace say(1) para que todos sepan que arrancó
+//   2. Caleb sale SIN disparar, al ver enemigo hace say(2) e intenta regresar
+//   3. Rambos escuchan say(2) de Caleb directamente y salen en esa dirección
+//   4. Si Caleb muere sin reportar, los Rambos tienen timeout propio y salen solos
+//      hacia donde escuchen disparos enemigos, o al frente si no oyen nada
 
 #include "core"
 #include "math"
 #include "bots"
 
-new const FRIEND_WARRIOR = ITEM_FRIEND|ITEM_WARRIOR
-new const ENEMY_WARRIOR  = ITEM_ENEMY|ITEM_WARRIOR
-new const ENEMY_GUN      = ITEM_ENEMY|ITEM_GUN
+new const FRIEND_WARRIOR  = ITEM_FRIEND|ITEM_WARRIOR
+new const ENEMY_WARRIOR   = ITEM_ENEMY|ITEM_WARRIOR
+new const ENEMY_GUN       = ITEM_ENEMY|ITEM_GUN
 
-new const SIGNAL_GO      = 1   // jefe → Caleb: "sal a explorar"
-new const SIGNAL_REPORT  = 2   // Caleb → jefe: "vi enemigos, ataca aquí"
-new const SIGNAL_RAMBO1  = 3   // jefe → Rambo1: "tu turno"
-new const SIGNAL_RAMBO2  = 4   // jefe → Rambo2: "tu turno"
+new const SIGNAL_START    = 1   // jefe → todos: "arrancamos"
+new const SIGNAL_REPORT   = 2   // Caleb → Rambos: "vi enemigos, vengan aquí"
 
 new const float:WALL_DIST       = 3.0   // distancia mínima a pared
-new const float:CALEB_TIMEOUT   = 20.0  // tiempo máximo que espera el jefe a Caleb
-new const float:RAMBO_TIMEOUT   = 25.0  // tiempo que espera antes de mandar al siguiente Rambo
+new const float:CALEB_EXPLORE   = 25.0  // tiempo máximo explorando antes de rendirse
+new const float:CALEB_RETURN    = 12.0  // tiempo intentando regresar
+new const float:RAMBO_TIMEOUT   = 30.0  // si no oye a Caleb en X segs, sale solo
 
 // ── JEFE (ID 0) ──────────────────────────────────────────────────
 rolJefe() {
-    new item
-    new sound
-    new float:yaw
-    new float:dirAtaque
+    // Solo da la señal de inicio y se pone en guardia
+    wait(0.5)
+    say(SIGNAL_START)
 
-    // Mandar a Caleb
-    say(SIGNAL_GO)
-
-    // Esperar reporte de Caleb o detectar que murió por disparos enemigos
-    new float:inicio = getTime()
-    new bool:reporteRecibido = false
-
-    for(;;) {
-        // Timeout: Caleb tardó demasiado → asumir muerto
-        if(getTime() - inicio > CALEB_TIMEOUT)
-            break
-
-        item = 0
-        new float:dist = hear(item, sound, yaw)
-
-        // Caleb reportó exitosamente
-        if(item == FRIEND_WARRIOR && sound == SIGNAL_REPORT) {
-            dirAtaque = getDirection() + yaw
-            reporteRecibido = true
-            break
-        }
-
-        // Caleb murió: se escuchan disparos enemigos → esa es la dirección
-        if(item == ENEMY_GUN) {
-            dirAtaque = getDirection() + yaw
-            break
-        }
-    }
-
-    // Apuntar hacia donde están los enemigos
-    rotate(dirAtaque)
-    wait(0.3)
-
-    // Mandar a Rambo1
-    say(SIGNAL_RAMBO1)
-
-    // Esperar a Rambo1 (si no regresa en RAMBO_TIMEOUT, asumir muerto)
-    new float:esperaRambo = getTime()
-    for(;;) {
-        if(getTime() - esperaRambo > RAMBO_TIMEOUT)
-            break
-        item = 0
-        hear(item, sound, yaw)
-        // Si se deja de oír actividad enemiga, Rambo puede haber limpiado la zona
-        if(item == FRIEND_WARRIOR && sound == SIGNAL_REPORT)
-            break
-    }
-
-    // Mandar a Rambo2
-    say(SIGNAL_RAMBO2)
-
-    // El jefe se queda en guardia disparando lo que vea
+    // Guardia: dispara lo que vea
     new float:headDir = 1.047
     for(;;) {
+        new touched = getTouched()
+        if(touched) raise(touched)
+
+        new item = ENEMY_WARRIOR
         new float:dist = 0.0
-        item = ENEMY_WARRIOR
         new float:eyaw
         new float:pitch
         watch(item, dist, eyaw, pitch)
+
         if(item == ENEMY_WARRIOR) {
             rotate(eyaw + getDirection())
             bendTorso(pitch)
@@ -113,23 +65,28 @@ rolCaleb() {
     new sound
     new float:yaw
 
-    // Esperar orden del jefe
+    // Esperar señal de inicio del jefe
     do {
         item = 0
         hear(item, sound, yaw)
-    } while(sound != SIGNAL_GO)
+    } while(sound != SIGNAL_START)
 
-    // Salir en dirección opuesta al jefe (adentrarse al laberinto)
+    // Salir en dirección opuesta al jefe
     new float:giro = 3.1415
     if(yaw > 0) giro = -giro
     rotate(getDirection() + yaw + giro)
     wait(0.5)
     walk()
 
-    // Avanzar SIN disparar — solo buscar con los ojos
+    // ── FASE 1: explorar sin disparar ──
     new float:headDir = 1.047
+    new float:inicioExplora = getTime()
+    new bool:encontro = false
+
     for(;;) {
-        // Evasión de paredes
+        if(getTime() - inicioExplora > CALEB_EXPLORE)
+            break  // timeout: no encontró nada, igual regresa
+
         if(isStanding()) {
             rotate(getDirection() + 1.5708)
             wait(0.5)
@@ -139,11 +96,10 @@ rolCaleb() {
             rotate(getDirection() + evade)
         }
 
-        // Recoger powerups
         new touched = getTouched()
         if(touched) raise(touched)
 
-        // Buscar enemigo — SOLO MIRAR, no disparar
+        // Solo mirar — nunca disparar
         item = ENEMY_WARRIOR
         new float:dist = 0.0
         new float:eyaw
@@ -151,50 +107,59 @@ rolCaleb() {
         watch(item, dist, eyaw, pitch)
 
         if(item == ENEMY_WARRIOR) {
-            // ¡Enemigo visto! Reportar al jefe y regresar
-            say(SIGNAL_REPORT)
-            wait(0.3)
-
-            // Dar media vuelta y correr de regreso
-            rotate(getDirection() + 3.1415)
-            wait(0.5)
-            run()
-
-            // Regresar durante 10 segundos esquivando paredes
-            new float:regreso = getTime()
-            for(;;) {
-                if(getTime() - regreso > 10.0)
-                    break
-                if(isStanding()) {
-                    rotate(getDirection() + 1.5708)
-                    wait(0.5)
-                    run()
-                } else if(sight() < WALL_DIST) {
-                    rotate(getDirection() + 0.5236)
-                }
-                new t = getTouched()
-                if(t) raise(t)
-            }
-
-            // Ya regresó — quedarse quieto en guardia SIN disparar
-            walk()
-            for(;;) {
-                new t = getTouched()
-                if(t) raise(t)
-                rotateHead(headDir)
-                if(getHeadYaw() == headDir)
-                    headDir = -headDir
-            }
+            encontro = true
+            break
         }
 
-        // Girar cabeza para ampliar campo visual
+        rotateHead(headDir)
+        if(getHeadYaw() == headDir)
+            headDir = -headDir
+    }
+
+    // Reportar si encontró enemigo
+    if(encontro) {
+        say(SIGNAL_REPORT)
+        wait(0.2)
+    }
+
+    // ── FASE 2: intentar regresar ──
+    // Dar media vuelta y correr de regreso esquivando paredes
+    rotate(getDirection() + 3.1415)
+    wait(0.5)
+    run()
+
+    new float:inicioRegreso = getTime()
+    for(;;) {
+        if(getTime() - inicioRegreso > CALEB_RETURN)
+            break
+
+        if(isStanding()) {
+            // Alternar giros para no quedar atascado en esquinas
+            new float:giroLocal = (getTime() - inicioRegreso < CALEB_RETURN/2.0)
+                ? 1.5708 : -1.5708
+            rotate(getDirection() + giroLocal)
+            wait(0.4)
+            run()
+        } else if(sight() < WALL_DIST) {
+            rotate(getDirection() + 0.7854)
+        }
+
+        new touched = getTouched()
+        if(touched) raise(touched)
+    }
+
+    // ── FASE 3: quedarse donde paró, en guardia SIN disparar ──
+    walk()
+    for(;;) {
+        new touched = getTouched()
+        if(touched) raise(touched)
         rotateHead(headDir)
         if(getHeadYaw() == headDir)
             headDir = -headDir
     }
 }
 
-// ── FUNCIÓN COMPARTIDA: lógica de ataque para Rambos ─────────────
+// ── LÓGICA DE ATAQUE COMPARTIDA ───────────────────────────────────
 atacar(float:dirInicial) {
     rotate(dirInicial)
     wait(0.5)
@@ -202,7 +167,6 @@ atacar(float:dirInicial) {
 
     new float:headDir = 1.047
     for(;;) {
-        // Evasión de paredes
         if(isStanding()) {
             rotate(getDirection() + 1.5708)
             wait(0.5)
@@ -215,7 +179,6 @@ atacar(float:dirInicial) {
         new touched = getTouched()
         if(touched) raise(touched)
 
-        // Buscar y atacar enemigos
         new item = ENEMY_WARRIOR
         new float:dist = 0.0
         new float:eyaw
@@ -239,7 +202,6 @@ atacar(float:dirInicial) {
                     shootBullet()
             }
         } else {
-            // Oír disparos y girar hacia ellos
             new sound
             new float:syaw
             new sitem = ENEMY_GUN
@@ -261,19 +223,42 @@ rolRambo1() {
     new item
     new sound
     new float:yaw
+    new float:dirAtaque
 
-    // Esperar señal del jefe
-    do {
+    // Esperar say(2) de Caleb, con timeout propio
+    new float:inicio = getTime()
+    new bool:recibioOrden = false
+
+    for(;;) {
+        // Timeout: Caleb probablemente murió → buscar sonido enemigo
+        if(getTime() - inicio > RAMBO_TIMEOUT)
+            break
+
         item = 0
         hear(item, sound, yaw)
-    } while(sound != SIGNAL_RAMBO1)
 
-    // Salir en dirección opuesta al jefe
-    new float:giro = 3.1415
-    if(yaw > 0) giro = -giro
-    new float:dir = getDirection() + yaw + giro
+        if(item == FRIEND_WARRIOR && sound == SIGNAL_REPORT) {
+            // Caleb reportó: ir en la dirección de su voz
+            new float:giro = 3.1415
+            if(yaw > 0) giro = -giro
+            dirAtaque = getDirection() + yaw + giro
+            recibioOrden = true
+            break
+        }
 
-    atacar(dir)
+        // Oportunidad: si oye disparos enemigos, guardar esa dirección
+        if(item == ENEMY_GUN) {
+            dirAtaque = getDirection() + yaw
+            // No romper todavía — seguir esperando por si llega Caleb
+        }
+    }
+
+    // Si nunca recibió orden, usar la dirección de disparos enemigos
+    // o simplemente ir al frente si no oyó nada
+    if(!recibioOrden && dirAtaque == 0.0)
+        dirAtaque = getDirection()
+
+    atacar(dirAtaque)
 }
 
 // ── RAMBO 2 (ID 3) ───────────────────────────────────────────────
@@ -281,19 +266,37 @@ rolRambo2() {
     new item
     new sound
     new float:yaw
+    new float:dirAtaque
 
-    // Esperar señal del jefe
-    do {
+    // Rambo2 espera más que Rambo1 para no salir al mismo tiempo
+    new float:inicio = getTime()
+    new bool:recibioOrden = false
+
+    for(;;) {
+        // Timeout más largo: deja que Rambo1 actúe primero
+        if(getTime() - inicio > RAMBO_TIMEOUT + 20.0)
+            break
+
         item = 0
         hear(item, sound, yaw)
-    } while(sound != SIGNAL_RAMBO2)
 
-    // Salir en dirección opuesta al jefe
-    new float:giro = 3.1415
-    if(yaw > 0) giro = -giro
-    new float:dir = getDirection() + yaw + giro
+        if(item == FRIEND_WARRIOR && sound == SIGNAL_REPORT) {
+            new float:giro = 3.1415
+            if(yaw > 0) giro = -giro
+            dirAtaque = getDirection() + yaw + giro
+            recibioOrden = true
+            break
+        }
 
-    atacar(dir)
+        if(item == ENEMY_GUN) {
+            dirAtaque = getDirection() + yaw
+        }
+    }
+
+    if(!recibioOrden && dirAtaque == 0.0)
+        dirAtaque = getDirection()
+
+    atacar(dirAtaque)
 }
 
 // ── FIGHT ─────────────────────────────────────────────────────────
