@@ -31,7 +31,7 @@ fight() {
   for(;;) {
     new float:thisTime = getTime()
 
-    // --- ID 1: Habla por radio cuando ve un enemigo ---
+    // --- ID 1: Vigía inicial - detecta enemigos y habla ---
     if(getID() == 1) {
       movilizar()
       new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
@@ -39,21 +39,137 @@ fight() {
       new float:dist, float:yaw, float:pitch
       watch(item, dist, yaw, pitch)
       if(item == ENEMY_WARRIOR && (thisTime - lastSpeakTime > SPEAK_COOLDOWN)) {
-        speak(0, 1)          // Canal 0, palabra 1 = "enemigo visto"
+        print("ID 1: Enemigo visto, avisando a ID 2\n")
+        speak(1, 1)          // Canal 1, palabra 1
         lastSpeakTime = thisTime
       }
     }
 
-    // --- ID 2: Escucha el radio y camina si recibe la orden ---
+    // --- ID 2: Escucha a ID 1, ataca y avisa a ID 3 ---
     if(getID() == 2) {
       new word, sender_id
-      // Escucha en el canal 0 (mismo que usa ID 1)
-      if(listen(0, word, sender_id)) {
+      if(listen(1, word, sender_id)) {
         if(word == 1) {
-          print("detectamos y atacamos")
+          print("ID 2: Orden recibida de ID 1, ATACANDO\n")
           movilizar()
           rambear()
         }
+      }
+      // Avisar al ID 3 si está en combate
+      new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
+      new item = ENEMY_WARRIOR
+      new float:dist, float:yaw, float:pitch
+      watch(item, dist, yaw, pitch)
+      if(item == ENEMY_WARRIOR && (thisTime - lastSpeakTime > SPEAK_COOLDOWN)) {
+        print("ID 2: Enemigo visto, avisando a ID 3\n")
+        speak(2, 2)          // Canal 2, palabra 2
+        lastSpeakTime = thisTime
+      }
+    }
+
+    // --- ID 3: Escucha a ID 2, ataca y avisa a ID 4 ---
+    if(getID() == 3) {
+      new word, sender_id
+      if(listen(2, word, sender_id)) {
+        if(word == 2) {
+          print("ID 3: Orden recibida de ID 2, ATACANDO\n")
+          movilizar()
+          rambear()
+        }
+      }
+      new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
+      new item = ENEMY_WARRIOR
+      new float:dist, float:yaw, float:pitch
+      watch(item, dist, yaw, pitch)
+      if(item == ENEMY_WARRIOR && (thisTime - lastSpeakTime > SPEAK_COOLDOWN)) {
+        print("ID 3: Enemigo visto, avisando a ID 4\n")
+        speak(3, 3)          // Canal 3, palabra 3
+        lastSpeakTime = thisTime
+      }
+    }
+
+    // --- ID 4: Escucha a ID 3, ataca y avisa a ID 5 ---
+    if(getID() == 4) {
+      new word, sender_id
+      if(listen(3, word, sender_id)) {
+        if(word == 3) {
+          print("ID 4: Orden recibida de ID 3, ATACANDO\n")
+          movilizar()
+          rambear()
+        }
+      }
+      new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
+      new item = ENEMY_WARRIOR
+      new float:dist, float:yaw, float:pitch
+      watch(item, dist, yaw, pitch)
+      if(item == ENEMY_WARRIOR && (thisTime - lastSpeakTime > SPEAK_COOLDOWN)) {
+        print("ID 4: Enemigo visto, avisando a ID 5\n")
+        speak(4, 4)          // Canal 4, palabra 4
+        lastSpeakTime = thisTime
+      }
+    }
+
+    // --- ID 5: Escucha a ID 4, ataca y avisa a ID 6 ---
+    if(getID() == 5) {
+      new word, sender_id
+      if(listen(4, word, sender_id)) {
+        if(word == 4) {
+          print("ID 5: Orden recibida de ID 4, ATACANDO\n")
+          movilizar()
+          rambear()
+        }
+      }
+      new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
+      new item = ENEMY_WARRIOR
+      new float:dist, float:yaw, float:pitch
+      watch(item, dist, yaw, pitch)
+      if(item == ENEMY_WARRIOR && (thisTime - lastSpeakTime > SPEAK_COOLDOWN)) {
+        print("ID 5: Enemigo visto, avisando a ID 6\n")
+        speak(5, 5)          // Canal 5, palabra 5
+        lastSpeakTime = thisTime
+      }
+    }
+
+    // --- ID 6: Escucha a ID 5, ataca y avisa a ID 7 ---
+    if(getID() == 6) {
+      new word, sender_id
+      if(listen(5, word, sender_id)) {
+        if(word == 5) {
+          print("ID 6: Orden recibida de ID 5, ATACANDO\n")
+          movilizar()
+          rambear()
+        }
+      }
+      new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
+      new item = ENEMY_WARRIOR
+      new float:dist, float:yaw, float:pitch
+      watch(item, dist, yaw, pitch)
+      if(item == ENEMY_WARRIOR && (thisTime - lastSpeakTime > SPEAK_COOLDOWN)) {
+        print("ID 6: Enemigo visto, avisando a ID 7\n")
+        speak(6, 6)          // Canal 6, palabra 6
+        lastSpeakTime = thisTime
+      }
+    }
+
+    // --- ID 7: Escucha a ID 6, ataca (es el último, no avisa a nadie) ---
+    if(getID() == 7) {
+      new word, sender_id
+      if(listen(6, word, sender_id)) {
+        if(word == 6) {
+          print("ID 7: Orden recibida de ID 6, ATACANDO\n")
+          movilizar()
+          rambear()
+        }
+      }
+      // ID 7 también puede atacar por sí mismo
+      new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
+      new item = ENEMY_WARRIOR
+      new float:dist, float:yaw, float:pitch
+      watch(item, dist, yaw, pitch)
+      if(item == ENEMY_WARRIOR && (thisTime - lastSpeakTime > SPEAK_COOLDOWN)) {
+        print("ID 7: Enemigo visto, ATACANDO DIRECTAMENTE\n")
+        movilizar()
+        rambear()
       }
     }
   }
