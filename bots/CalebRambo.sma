@@ -31,6 +31,10 @@ fight() {
   for(;;) {
     new float:thisTime = getTime()
 
+    //el lider se queda siempre en la base, para defender
+    if(id == 0) {//el lider se queda siempre en la base, para defender
+      rambear()
+    }
     // --- ID 1: Vigía inicial - detecta enemigos y habla ---
     if(getID() == 1) {
       movilizar()
