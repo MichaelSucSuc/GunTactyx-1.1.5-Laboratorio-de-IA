@@ -5,6 +5,7 @@
 fight() {
   rotate(3.1415)
   wait(0.02)
+
   rotate(getDirection() + 0.7854)
   new id = getID()
   if(id == 0) {
@@ -77,19 +78,6 @@ rambear() {
   new float:pitch
   watch(item,dist,yaw,pitch)
   if(item == ENEMY_WARRIOR) {
-    if(getID()%2 == 0) {
-      new float:oldDist = dist
-      new float:oldYaw = yaw
-      new float:oldPitch =pitch
-      item = ENEMY_WARRIOR
-      watch(item,dist,yaw,pitch)
-      if(item == ITEM_NONE) {
-        item = ENEMY_WARRIOR
-        dist = oldDist
-        yaw = oldYaw
-        pitch = oldPitch
-      }
-    }
     rotate(yaw+getDirection())
     bendTorso(pitch)
     bendHead(-pitch)
@@ -123,23 +111,25 @@ rambear() {
 movilizar(){
   new const float:CHANGE_DIR_TIME = 20.0
   new const float:AVOID_WALL_DIR = 0.31415
-  new float:lastTime = 0.0
+  static float:lastTime = 0.0
   new float:thisTime = getTime()
   // --- Movimiento y cambio de dirección ---
-  if(thisTime - lastTime > CHANGE_DIR_TIME) {
+  if(thisTime-lastTime > CHANGE_DIR_TIME) {
     lastTime = thisTime
     new float:randAngle = float(random(3)-1)*1.5758
-    rotate(getDirection() + randAngle)
+    rotate(getDirection()+randAngle)
   } else if(isStanding()) {
     rotate(getDirection()+0.7854)
     if(getID()%2 == 0) {
+      wait(0.5)
       crouch()
+      wait(1.0)
       walkcr()
     } else {
       walk()
     }
   } else if(sight() < 5.0) {
-    rotate(getDirection() + AVOID_WALL_DIR)
+    rotate(getDirection()+AVOID_WALL_DIR)
   }
 }
 
