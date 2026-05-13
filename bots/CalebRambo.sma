@@ -34,10 +34,33 @@ fight() {
     //el lider se queda siempre en la base, para defender
     if(id == 0) {//el lider se queda siempre en la base, para defender
       rambear()
+      //ordena que salga el explorador
+      speak(0, 1)          // Canal 0, palabra 1
+
+
+      //si escucha que id 1 encontro algo mandamos a rambo 2(primer rambo)
+      new word, sender_id
+      // Escucha a los soldados 1-6 y activa al siguiente
+      for(new i = 1; i <= 6; i++) {
+        if(listen(i, word, sender_id)) {
+          if(word == i) {
+            printf("JEFE: Soldado %d pide refuerzos, activando soldado %d\n", i, i+1, 2)
+            speak(0, i+1)
+          }
+        }
+      } 
     }
+
     // --- ID 1: Vigía inicial - detecta enemigos y habla ---
     if(getID() == 1) {
-      movilizar()
+      //escucha la orden del jefe
+      new word, sender_id
+      if(listen(0, word, sender_id)) {
+        if(word == 1) {
+          movilizar()
+        }
+      }
+      //decir, enemigo visto
       new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
       new item = ENEMY_WARRIOR
       new float:dist, float:yaw, float:pitch
@@ -51,10 +74,10 @@ fight() {
 
     // --- ID 2: Escucha a ID 1, ataca y avisa a ID 3 ---
     if(getID() == 2) {
+      //escucha la orden del jefe
       new word, sender_id
-      if(listen(1, word, sender_id)) {
-        if(word == 1) {
-          print("ID 2: Orden recibida de ID 1, ATACANDO\n")
+      if(listen(0, word, sender_id)) {
+        if(word == 2) {
           movilizar()
           rambear()
         }
@@ -74,9 +97,8 @@ fight() {
     // --- ID 3: Escucha a ID 2, ataca y avisa a ID 4 ---
     if(getID() == 3) {
       new word, sender_id
-      if(listen(2, word, sender_id)) {
-        if(word == 2) {
-          print("ID 3: Orden recibida de ID 2, ATACANDO\n")
+      if(listen(0, word, sender_id)) {
+        if(word == 3) {
           movilizar()
           rambear()
         }
