@@ -28,29 +28,34 @@ fight() {
     stand()
   }
 
-  new float:lastSpeakTime = 0.0 
+  static float:lastSpeakTime = 0.0 
   new const float:SPEAK_COOLDOWN = 0.25
   for(;;) {
     new float:thisTime = getTime()
 
     //el lider se queda siempre en la base, para defender
     if(id == 0) {//el lider se queda siempre en la base, para defender
+      //new int:ramboactivo = 0
       rambear()
       //ordena que salga el explorador
       speak(0, 1)          // Canal 0, palabra 1
 
-
       //si escucha que id 1 encontro algo mandamos a rambo 2(primer rambo)
       new word, sender_id
-      // Escucha a los soldados 1-6 y activa al siguiente
-      for(new i = 1; i <= 6; i++) {
-        if(listen(i, word, sender_id)) {
-          if(word == i) {
-            printf("JEFE: Soldado %d pide refuerzos, activando soldado %d\n", i, i+1, 2)
-            speak(0, i+1)
-          }
+      // Escucha a los soldados y activa al siguiente
+      if(listen(1, word, sender_id)) {
+        if(word == 1) {
+          speak(0, 2)
         }
-      } 
+      }
+
+      if(lastheartbeat != 0.0){
+        currenttime = getTime()
+        if(currenttime - lastheartbeat > 3) {
+          print("llamamos a refuerzos porque murio el 2")
+          speak(0, 3)          // Canal 0, palabra 3
+        }
+      }
     }
 
     // --- ID 1: Vigía inicial - detecta enemigos y habla ---
@@ -189,17 +194,7 @@ fight() {
       }
     }
 
-    // Avisar al jefe si me he muerto
-    if(lastheartbeat =! 0.0){
-      for(new i = 2; i <= 6; i++) {
-        if(currenttime - lastheartbeat > 5) {
-          print("llamamos a refuerzos porque morí")
-          speak(i, i)          // Canal 2, palabra 2
-          lastSpeakTime = thisTime
-        }
-      }
-    }
- 
+
   }
 }
 
