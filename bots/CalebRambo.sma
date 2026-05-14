@@ -7,8 +7,8 @@ fight() {
   wait(0.02)
   rotate(getDirection() + 0.7854)
   new id = getID()
-  new float:currenttime = getTime()
-  new float:lastheartbeat = 0.0
+  static float:ultimoLatido = 0.0;
+  static bool:soldadoActivo = false;
 
   if(id == 0) {
     stand()
@@ -28,7 +28,7 @@ fight() {
     stand()
   }
 
-  static float:lastSpeakTime = 0.0 
+  new float:lastSpeakTime = 0.0 
   new const float:SPEAK_COOLDOWN = 0.25
   for(;;) {
     new float:thisTime = getTime()
@@ -46,14 +46,21 @@ fight() {
       if(listen(1, word, sender_id)) {
         if(word == 1) {
           speak(0, 2)
+          soldadoActivo = true;
+          ultimoLatido = getTime();
         }
       }
-
-      if(lastheartbeat != 0.0){
-        currenttime = getTime()
-        if(currenttime - lastheartbeat > 3) {
-          print("llamamos a refuerzos porque murio el 2")
-          speak(0, 3)          // Canal 0, palabra 3
+      if(soldadoActivo) {
+        new sender;
+        if(listen(2, word, sender) && word == 99) {
+          ultimoLatido = getTime();   // recibió latido, actualiza
+        }
+        if(getTime() - ultimoLatido > 6.0) {
+          // El soldado murió
+          soldadoActivo = false;
+          // Activar al siguiente...
+          print("se activo el soldado 3")
+          speak(0, 3)
         }
       }
     }
@@ -80,13 +87,17 @@ fight() {
 
     // --- ID 2: Escucha a ID 1, ataca y avisa a ID 3 ---
     if(getID() == 2) {
+      static float:ultimoEnvio = 0.0;
+      if(getTime() - ultimoEnvio > 5.0) {
+          speak(2, 99);   // Envía "estoy vivo" por el canal 2
+          ultimoEnvio = getTime();
+      }
       //escucha la orden del jefe
       new word, sender_id
       if(listen(0, word, sender_id)) {
         if(word == 2) {
           movilizar()
           rambear()
-          lastheartbeat = getTime()
         }
       }
     }
@@ -193,8 +204,6 @@ fight() {
         lastSpeakTime = thisTime
       }
     }
-
-
   }
 }
 
