@@ -35,7 +35,6 @@ fight() {
     if(id == 0) {//el lider se queda siempre en la base, para defender
       //new int:ramboactivo = 0
       rambear()
-      //ordena que salga el explorador
       speak(0, 1)          // Canal 0, palabra 1
 
       //si escucha que id 1 encontro algo mandamos a rambo 2(primer rambo)
@@ -44,6 +43,7 @@ fight() {
 
       if(listen(1, word, sender_id)) {
         if(word == 1) {
+          print("JEFE: Escuché a ID 1, activando ID 2\n")
           speak(0, 2)
         }
       }
@@ -67,9 +67,9 @@ fight() {
           speak(0, 6)
         }
       }
-      if(listen(7, word, sender_id)) {
-        if(word == 7) {
-          speak(0, 8)
+      if(listen(6, word, sender_id)) {
+        if(word == 6) {
+          speak(0, 7)
         }
       }
     }
@@ -102,7 +102,6 @@ fight() {
         if(word == 2) {
           movilizar()
           rambear()
-          movilizar()
         }
       }
       // Avisar al jefe si está en combate
@@ -223,16 +222,10 @@ fight() {
 
 
 rambear() {
-  // Evitar paredes (igual que en movilizar)
-
-  // Declarar constantes que usa la función
-  new const FRIEND_WARRIOR = ITEM_FRIEND | ITEM_WARRIOR
-  new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
-  new const ENEMY_GUN = ITEM_ENEMY | ITEM_GUN
-  
-  // Declarar variable local para controlar la rotación de la cabeza
-  new float:headDir = 1.047   // 60 grados en radianes
-  // cuerpo de la función
+  new const FRIEND_WARRIOR = ITEM_FRIEND|ITEM_WARRIOR
+  new const ENEMY_WARRIOR = ITEM_ENEMY|ITEM_WARRIOR
+  new const ENEMY_GUN = ITEM_ENEMY|ITEM_GUN
+  new float:headDir = 1.047
   new touched = getTouched()
   if(touched) raise(touched)
   new item = ENEMY_WARRIOR
@@ -276,6 +269,7 @@ movilizar(){
   new const float:AVOID_WALL_DIR = 0.31415
   static float:lastTime = 0.0
   new float:thisTime = getTime()
+
   // --- Movimiento y cambio de dirección ---
   if(thisTime-lastTime > CHANGE_DIR_TIME) {
     lastTime = thisTime
