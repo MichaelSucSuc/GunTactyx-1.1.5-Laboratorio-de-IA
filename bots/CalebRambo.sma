@@ -7,8 +7,6 @@ fight() {
   wait(0.02)
   rotate(getDirection() + 0.7854)
   new id = getID()
-  static float:ultimoLatido = 0.0;
-  static bool:soldadoActivo = false;
 
   if(id == 0) {
     stand()
@@ -43,24 +41,35 @@ fight() {
       //si escucha que id 1 encontro algo mandamos a rambo 2(primer rambo)
       new word, sender_id
       // Escucha a los soldados y activa al siguiente
+
       if(listen(1, word, sender_id)) {
         if(word == 1) {
           speak(0, 2)
-          soldadoActivo = true;
-          ultimoLatido = getTime();
         }
       }
-      if(soldadoActivo) {
-        new sender;
-        if(listen(2, word, sender) && word == 99) {
-          ultimoLatido = getTime();   // recibió latido, actualiza
-        }
-        if(getTime() - ultimoLatido > 6.0) {
-          // El soldado murió
-          soldadoActivo = false;
-          // Activar al siguiente...
-          print("se activo el soldado 3")
+      if(listen(2, word, sender_id)) {
+        if(word == 2) {
           speak(0, 3)
+        }
+      }
+      if(listen(3, word, sender_id)) {
+        if(word == 3) {
+          speak(0, 4)
+        }
+      }
+      if(listen(4, word, sender_id)) {
+        if(word == 4) {
+          speak(0, 5)
+        }
+      }
+      if(listen(5, word, sender_id)) {
+        if(word == 5) {
+          speak(0, 6)
+        }
+      }
+      if(listen(7, word, sender_id)) {
+        if(word == 7) {
+          speak(0, 8)
         }
       }
     }
@@ -87,18 +96,23 @@ fight() {
 
     // --- ID 2: Escucha a ID 1, ataca y avisa a ID 3 ---
     if(getID() == 2) {
-      static float:ultimoEnvio = 0.0;
-      if(getTime() - ultimoEnvio > 5.0) {
-          speak(2, 99);   // Envía "estoy vivo" por el canal 2
-          ultimoEnvio = getTime();
-      }
       //escucha la orden del jefe
       new word, sender_id
       if(listen(0, word, sender_id)) {
         if(word == 2) {
           movilizar()
           rambear()
+          movilizar()
         }
+      }
+      // Avisar al jefe si está en combate
+      new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
+      new item = ENEMY_WARRIOR
+      new float:dist, float:yaw, float:pitch
+      watch(item, dist, yaw, pitch)
+      if(item == ENEMY_WARRIOR && (thisTime - lastSpeakTime > SPEAK_COOLDOWN)) {
+        speak(2, 2)          // Canal 2, palabra 2
+        lastSpeakTime = thisTime
       }
     }
 
@@ -209,6 +223,8 @@ fight() {
 
 
 rambear() {
+  // Evitar paredes (igual que en movilizar)
+
   // Declarar constantes que usa la función
   new const FRIEND_WARRIOR = ITEM_FRIEND | ITEM_WARRIOR
   new const ENEMY_WARRIOR = ITEM_ENEMY | ITEM_WARRIOR
@@ -267,14 +283,7 @@ movilizar(){
     rotate(getDirection()+randAngle)
   } else if(isStanding()) {
     rotate(getDirection()+0.7854)
-    if(getID()%2 == 0) {
-      wait(0.5)
-      crouch()
-      wait(1.0)
-      walkcr()
-    } else {
-      walk()
-    }
+    walk()
   } else if(sight() < 5.0) {
     rotate(getDirection()+AVOID_WALL_DIR)
   }
