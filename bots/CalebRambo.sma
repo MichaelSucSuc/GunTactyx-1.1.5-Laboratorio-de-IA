@@ -190,11 +190,13 @@ fight() {
     }
 
     // Avisar al jefe si me he muerto
-    for(new i = 2; i <= 6; i++) {
-      if(currenttime - lastheartbeat > 5) {
-        print("llamamos a refuerzos porque morí")
-        speak(i, i)          // Canal 2, palabra 2
-        lastSpeakTime = thisTime
+    if(lastheartbeat =! 0.0){
+      for(new i = 2; i <= 6; i++) {
+        if(currenttime - lastheartbeat > 5) {
+          print("llamamos a refuerzos porque morí")
+          speak(i, i)          // Canal 2, palabra 2
+          lastSpeakTime = thisTime
+        }
       }
     }
  
